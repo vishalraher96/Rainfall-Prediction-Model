@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rainfall Predictor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font and base styling */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .container-card {
+            background-color: #ffffff;
+            padding: 2.5rem; 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); 
+            border-radius: 1rem; 
+            border: 1px solid #e2e8f0; 
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="app" class="container-card w-full max-w-xl">
+
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-blue-800 tracking-tight">
+                Rainfall Predictor
+            </h1>
+            <p class="text-md text-gray-600 mt-2">
+                Input live weather data for an instant prediction.
+            </p>
+        </div>
+
+        <div id="api-info" class="p-4 bg-blue-50 border-l-4 border-blue-500 text-blue-800 mb-6 rounded-lg text-sm">
+            <p class="font-bold">Location Status:</p>
+            <p id="location-status" class="mt-2 font-medium text-blue-800">Ready to fetch location data.</p>
+        </div>
+
+        <form id="city-search-form" class="flex space-x-2 mb-4">
+            <input type="text" id="city-input" placeholder="Enter City Name (e.g., Mumbai, Nagpur)" required
+                class="flex-grow px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+            <button type="submit" id="search-city-button"
+                class="flex-shrink-0 py-2 px-4 rounded-xl text-md font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-200 ease-in-out transform active:scale-95 shadow-lg">
+                Search
+            </button>
+        </form>
+        
+        <button id="get-location-data" 
+            class="w-full flex items-center justify-center py-2 px-4 rounded-xl text-md font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-200 ease-in-out transform active:scale-95 shadow-lg mb-6">
+            <svg id="location-icon" class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.828 0l-4.243-4.243m11.314-1.414l.707-.707a1.998 1.998 0 000-2.828l-4.243-4.243a1.998 1.998 0 00-2.828 0l-4.243 4.243a1.998 1.998 0 000 2.828l.707.707m11.314-1.414z"></path>
+            </svg>
+            <span id="location-button-text">Get Live Weather Data for My Current Location</span>
+        </button>
+
+
+        <form id="prediction-form" class="space-y-5">
+            
+            <div class="grid grid-cols-2 gap-4 sm:gap-6">
+                
+                <div>
+                    <label for="pressure" class="block text-sm font-medium text-gray-700">Pressure (hPa)</label>
+                    <input type="number" id="pressure" value="1012.5" step="0.1" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+                </div>
+
+                <div>
+                    <label for="temparature" class="block text-sm font-medium text-gray-700">Temperature (°C)</label>
+                    <input type="number" id="temparature" value="25.5" step="0.1" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+                </div>
+
+                <div>
+                    <label for="dewpoint" class="block text-sm font-medium text-gray-700">Dewpoint (°C)</label>
+                    <input type="number" id="dewpoint" value="18.0" step="0.1" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+                </div>
+
+                <div>
+                    <label for="humidity" class="block text-sm font-medium text-gray-700">Humidity (%)</label>
+                    <input type="number" id="humidity" value="75.0" step="0.1" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+                </div>
+
+                <div class="col-span-2">
+                    <label for="windspeed" class="block text-sm font-medium text-gray-700">Windspeed (km/h)</label>
+                    <input type="number" id="windspeed" value="15.0" step="0.1" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+                </div>
+            </div>
+
+            <button type="submit" id="predict-button" 
+                class="w-full flex items-center justify-center py-3 px-4 rounded-xl text-lg font-semibold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition duration-200 ease-in-out transform active:scale-95 shadow-lg">
+                <span id="button-text">Predict Rainfall Now</span>
+                <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </button>
+        </form>
+
+        <hr class="mt-8 mb-8 border-gray-200">
+
+        <div class="mt-8">
+            <h2 class="text-2xl font-semibold text-blue-800 mb-4">Result</h2>
+            
+            <div id="prediction-result" class="min-h-[120px] p-6 text-center border-2 border-dashed border-gray-300 rounded-xl transition duration-300">
+                <p class="text-lg text-gray-500 font-medium">
+                    Enter parameters above or use one of the "Get Live Weather Data" options.
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const form = document.getElementById('prediction-form');
+        const predictButton = document.getElementById('predict-button');
+        const resultDiv = document.getElementById('prediction-result');
+        const buttonText = document.getElementById('button-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const locationButton = document.getElementById('get-location-data');
+        const locationButtonText = document.getElementById('location-button-text');
+        const locationStatus = document.getElementById('location-status');
+        const citySearchForm = document.getElementById('city-search-form'); // NEW
+        const cityInput = document.getElementById('city-input'); // NEW
+        const searchCityButton = document.getElementById('search-city-button'); // NEW
+        const featureIds = ['pressure', 'temparature', 'dewpoint', 'humidity', 'windspeed'];
+
+        // --- Configuration ---
+        const API_URL = 'http://127.0.0.1:5000/api/predict'; 
+        const API_BASE_URL = 'https://api.openweathermap.org/data/2.5/weather';
+        // NOTE: Free OpenWeatherMap API Key. You might need to replace this if it exceeds usage limits.
+        const OPENWEATHERMAP_API_KEY = 'aaafef13cb298fed56795f6fb6214c16'; 
+
+        
+        const MOCK_ERROR_FALLBACK = {
+            status: "error",
+            message: "Failed to connect to Python server. Ensure 'app.py' is running and accessible at http://127.0.0.1:5000."
+        };
+
+        // --- Event Listeners ---
+        form.addEventListener('submit', handlePrediction);
+        locationButton.addEventListener('click', getLocationAndFetchWeather);
+        citySearchForm.addEventListener('submit', handleCitySearch); // NEW
+
+
+        // --- UI State Handlers ---
+        function setLoading(isLoading) {
+            predictButton.disabled = isLoading;
+            buttonText.textContent = isLoading ? 'Predicting...' : 'Predict Rainfall Now';
+            if (isLoading) {
+                loadingSpinner.classList.remove('hidden');
+                predictButton.classList.add('bg-blue-400');
+                predictButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+            } else {
+                loadingSpinner.classList.add('hidden');
+                predictButton.classList.remove('bg-blue-400');
+                predictButton.classList.add('bg-green-600', 'hover:bg-green-700');
+            }
+        }
+
+        // Updated state handler to include city search button
+        function setLocationButtonState(isLoading, text = 'Ready to fetch location data.', isError = false) {
+            locationButton.disabled = isLoading;
+            searchCityButton.disabled = isLoading; // Disable city search while fetching
+            locationButtonText.textContent = isLoading ? 'Getting Location...' : 'Get Live Weather Data for My Current Location';
+            cityInput.disabled = isLoading;
+            
+            locationStatus.textContent = text;
+            locationStatus.classList.remove('text-green-700', 'text-red-700', 'text-blue-800');
+            
+            if (isError) {
+                locationStatus.classList.add('text-red-700');
+            } else if (!isLoading && text.includes('fetched')) {
+                locationStatus.classList.add('text-green-700');
+            } else {
+                locationStatus.classList.add('text-blue-800');
+            }
+            
+            // Visual feedback for Geolocation button
+            if (isLoading && text === 'Getting Location...') {
+                locationButton.classList.add('bg-blue-400');
+                locationButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            } else {
+                locationButton.classList.remove('bg-blue-400');
+                locationButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            }
+
+             // Visual feedback for Search button
+            if (isLoading && text.includes('Fetching')) {
+                searchCityButton.classList.add('bg-blue-400');
+                searchCityButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            } else {
+                searchCityButton.classList.remove('bg-blue-400');
+                searchCityButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            }
+        }
+
+
+        // --- Geolocation and Weather Fetching Logic ---
+
+        // Helper function for Dewpoint Calculation (Magnus formula approximation)
+        function calculateDewPoint(T_celsius, RH_percent) {
+            const T = T_celsius;
+            const RH = RH_percent / 100.0;
+            
+            if (RH === 0) return 0; 
+            
+            const a = 17.27;
+            const b = 237.7;
+            
+            const alpha = ((a * T) / (b + T)) + Math.log(RH);
+            const Td = (b * alpha) / (a - alpha);
+            
+            return Td.toFixed(1); 
+        }
+
+        /**
+         * Fetches current weather data and populates the form fields.
+         * @param {number} lat - Latitude.
+         * @param {number} lon - Longitude.
+         * @param {string} locationName - Name of the location (city, coords, etc.)
+         */
+        async function fetchWeatherData(lat, lon, locationName = `Lat ${lat.toFixed(2)}, Lon ${lon.toFixed(2)}`) {
+            
+            const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHERMAP_API_KEY}&units=metric`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.cod !== 200) {
+                    throw new Error(`Weather API Error: ${data.message}`);
+                }
+                
+                // Extract required parameters
+                const tempCelsius = data.main.temp;
+                const humidityPercent = data.main.humidity;
+                const pressureHpa = data.main.pressure;
+                // Convert wind speed from m/s to km/h (m/s * 3.6)
+                const windSpeedMps = data.wind.speed || 0; 
+                const windSpeedKmH = windSpeedMps * 3.6; 
+                
+                // Calculate Dewpoint
+                const dewpoint = calculateDewPoint(tempCelsius, humidityPercent);
+
+                // Populate form fields
+                document.getElementById('pressure').value = pressureHpa.toFixed(1);
+                document.getElementById('temparature').value = tempCelsius.toFixed(1);
+                document.getElementById('dewpoint').value = dewpoint; 
+                document.getElementById('humidity').value = humidityPercent.toFixed(1);
+                document.getElementById('windspeed').value = windSpeedKmH.toFixed(1);
+                
+                const displayLocation = data.name || locationName;
+
+                setLocationButtonState(false, `✅ Live data fetched for: ${displayLocation}`, false);
+                resultDiv.innerHTML = `<p class="text-lg text-gray-500 font-medium">Weather data loaded for ${displayLocation}. Click 'Predict Rainfall Now' below.</p>`;
+
+            } catch (error) {
+                setLocationButtonState(false, `❌ Error fetching weather data: ${error.message}. Please check your API key and connection.`, true);
+            }
+        }
+
+
+        // --- Geolocation (Current Location) ---
+        function getLocationAndFetchWeather(event) {
+            event.preventDefault();
+            
+            if (OPENWEATHERMAP_API_KEY === 'YOUR_API_KEY_HERE') {
+                 setLocationButtonState(false, "❌ Error: Please replace 'YOUR_API_KEY_HERE' in the JavaScript code with your actual OpenWeatherMap key.", true);
+                 return;
+            }
+
+            setLocationButtonState(true, 'Getting Current Location...');
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        setLocationButtonState(true, 'Fetching Weather Data...');
+                        // Use a short delay for smooth UI feedback
+                        setTimeout(() => {
+                            fetchWeatherData(lat, lon);
+                        }, 500);
+                        
+                    },
+                    (error) => {
+                        let errorMessage;
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage = "Location access denied. Please allow location in your browser settings and try again.";
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage = "Location information is unavailable.";
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage = "The request to get user location timed out.";
+                                break;
+                            default:
+                                errorMessage = "An unknown location error occurred.";
+                                break;
+                        }
+                        setLocationButtonState(false, `❌ Location Error: ${errorMessage}`, true);
+                    }, 
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                setLocationButtonState(false, "❌ Geolocation is not supported by your browser.", true);
+            }
+        }
+
+
+        // --- NEW: City Search Logic ---
+
+        /**
+         * Uses OpenWeatherMap Geocoding API to get lat/lon from a city name.
+         * @param {string} cityName - The name of the city to search for.
+         * @returns {object|null} - {lat, lon, name} or null on failure.
+         */
+        async function getCityCoordinates(cityName) {
+            // Note: The limit=1 parameter is crucial for getting the best match.
+            const geocodeUrl = `http://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(cityName)}&limit=1&appid=${OPENWEATHERMAP_API_KEY}`;
+            
+            try {
+                const response = await fetch(geocodeUrl);
+                const data = await response.json();
+
+                if (data.length === 0) {
+                    throw new Error(`City not found: ${cityName}. Please check the spelling.`);
+                }
+                
+                const result = data[0];
+                return { lat: result.lat, lon: result.lon, name: `${result.name}, ${result.country}` };
+
+            } catch (error) {
+                throw new Error(`Geocoding failed: ${error.message}`);
+            }
+        }
+
+        async function handleCitySearch(event) {
+            event.preventDefault();
+            
+            if (OPENWEATHERMAP_API_KEY === 'YOUR_API_KEY_HERE') {
+                 setLocationButtonState(false, "❌ Error: Please replace 'YOUR_API_KEY_HERE' in the JavaScript code with your actual OpenWeatherMap key.", true);
+                 return;
+            }
+
+            const cityName = cityInput.value.trim();
+            if (!cityName) return;
+
+            setLocationButtonState(true, `Searching for coordinates of ${cityName}...`);
+
+            try {
+                const coords = await getCityCoordinates(cityName);
+                if (coords) {
+                    setLocationButtonState(true, `Fetching weather for ${coords.name}...`);
+                    await fetchWeatherData(coords.lat, coords.lon, coords.name);
+                }
+            } catch (error) {
+                setLocationButtonState(false, `❌ ${error.message}`, true);
+            }
+        }
+
+
+        // --- Prediction Logic (Unchanged) ---
+        function getInputs() {
+            const payload = {};
+            let allValid = true;
+
+            featureIds.forEach(id => {
+                const element = document.getElementById(id);
+                const value = parseFloat(element.value);
+                if (isNaN(value)) {
+                    element.focus();
+                    allValid = false;
+                }
+                payload[id] = value;
+            });
+            return allValid ? payload : null;
+        }
+
+        function displayResult(data) {
+            resultDiv.className = 'min-h-[120px] p-6 text-center rounded-xl transition duration-300';
+            resultDiv.classList.add('flex', 'flex-col', 'justify-center', 'items-center', 'space-y-3');
+
+            if (data.status === 'error') {
+                resultDiv.classList.add('bg-red-100', 'border-2', 'border-red-500');
+                resultDiv.innerHTML = `
+                    <p class="text-xl font-bold text-red-700">Prediction Failed</p>
+                    <p class="text-sm text-red-600">${data.message}</p>
+                `;
+            } else if (data.status === 'success') {
+                const isRain = data.prediction.startsWith("YES");
+                const bgColor = isRain ? 'bg-green-100' : 'bg-blue-100';
+                const borderColor = isRain ? 'border-green-500' : 'border-blue-500';
+                const textColor = isRain ? 'text-green-800' : 'text-blue-800';
+
+                resultDiv.classList.add(bgColor, borderColor, 'border-2');
+
+                let probDetails = '';
+                if (data.probabilities) {
+                    probDetails = `
+                        <p class="text-sm text-gray-600">
+                            <span class="font-semibold">Confidence:</span> 
+                            Rain: <span class="font-mono">${data.probabilities.Rain}</span> /
+                            No Rain: <span class="font-mono">${data.probabilities["No Rain"]}</span>
+                        </p>
+                    `;
+                }
+
+                resultDiv.innerHTML = `
+                    <p class="text-3xl font-extrabold ${textColor}">${data.prediction}</p>
+                    ${probDetails}
+                `;
+            } else {
+                resultDiv.classList.add('bg-gray-100', 'border-2', 'border-gray-400');
+                resultDiv.innerHTML = `<p class="text-lg text-gray-700 font-medium">Unknown response format.</p>`;
+            }
+        }
+
+
+        async function handlePrediction(event) {
+            event.preventDefault();
+
+            const payload = getInputs();
+
+            if (!payload) {
+                resultDiv.className = 'min-h-[120px] p-6 text-center border-2 border-red-500 bg-red-50 rounded-xl transition duration-300 flex items-center justify-center';
+                resultDiv.innerHTML = '<p class="text-lg font-bold text-red-600">Please fill out all fields with valid numbers.</p>';
+                return;
+            }
+
+            setLoading(true);
+            
+            try {
+                const response = await fetch(API_URL, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload) 
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("API HTTP Error Response:", errorText);
+                    throw new Error(`HTTP error! status: ${response.status} - ${errorText.substring(0, 100)}...`);
+                }
+                
+                const finalResult = await response.json();
+                
+                displayResult(finalResult);
+
+            } catch (error) {
+                console.error("API Call Error:", error);
+                displayResult(MOCK_ERROR_FALLBACK); 
+            } finally {
+                setLoading(false);
+                resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+        
+        window.onload = () => {
+             // Re-attach listeners just in case
+             form.addEventListener('submit', handlePrediction);
+             locationButton.addEventListener('click', getLocationAndFetchWeather);
+             citySearchForm.addEventListener('submit', handleCitySearch);
+             console.log("Rainfall Predictor UI ready for API connection.");
+        };
+
+    </script>
+</body>
+</html>
